@@ -1,6 +1,13 @@
 #include "mainwindow.h"
 #include "phonemanagerwindow.h"
 #include "devicenumberdialog.h"
+#include "smsstatuswindow.h"
+#include <QMessageBox>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QJsonValue>
 #include <QMessageBox>
 
 MainWindow::MainWindow(QWidget *parent)
@@ -45,8 +52,38 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow() {}
 
 void MainWindow::onSendSms() {
-    QString message = messageEntry->toPlainText();
-    QMessageBox::information(this, "SMS Sent", "Sending done.\nMessage:\n" + message);
+    QString message = messageEntry->toPlainText().trimmed();
+    if (message.isEmpty()) {
+        QMessageBox::warning(this, "Empty", "Please enter a message first.");
+        return;
+    }
+    // Load numbers from file or memory
+    QStringList numbers;
+    QFile file("phone_numbers.json");
+    if (file.open(QIODevice::ReadOnly)) {
+        QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+        QJsonArray arr = doc.array();
+        for (const QJsonValue &val : arr) {
+            if (val.isString()) {
+                numbers.append(val.toString());
+            }
+        }
+    }
+
+    QString sender;
+    QFile devFile("device_number.json");
+    if (devFile.open(QIODevice::ReadOnly)) {
+        QJsonObject obj = QJsonDocument::fromJson(devFile.readAll()).object();
+        sender = obj["number"].toString();
+    }
+
+    if (sender.isEmpty()) {
+        QMessageBox::warning(this, "No Sender", "Please set a device number in Manage Devices first.");
+        return;
+    }
+
+    SMSStatusWindow *window = new SMSStatusWindow(sender, message, this);
+    window->exec();
 }
 
 void MainWindow::onManagePhones() {

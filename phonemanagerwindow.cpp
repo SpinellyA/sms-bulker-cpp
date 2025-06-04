@@ -11,6 +11,17 @@
 #include <QMessageBox>
 #include <QTextStream>
 
+int checkNumber(const QString &number) {
+    if (number.isEmpty()) return 0;
+
+    if (number.length() == 11 && number.startsWith("09") && number.toLongLong()) return 2;
+    if (number.length() == 13 && number.startsWith("+639") && number.mid(1).toLongLong()) return 1;
+    if (number.length() == 10 && number.startsWith("9") && number.toLongLong()) return 3;
+
+    return 0;
+}
+
+
 PhoneManagerWindow::PhoneManagerWindow(QWidget *parent)
     : QDialog(parent)
 {
@@ -175,21 +186,93 @@ void PhoneManagerWindow::importFromFile() {
     if (fileName.isEmpty()) return;
 
     QFile file(fileName);
-    if (file.open(QIODevice::ReadOnly)) {
-        QTextStream in(&file);
-        while (!in.atEnd()) {
-            QString line = in.readLine().trimmed();
-            if (line.startsWith("09") && line.length() == 11) {
-                QString normalized = "+63" + line.mid(1);
-                if (!phoneNumbers.contains(normalized)) {
-                    phoneNumbers.append(normalized);
-                    phoneInfo[normalized] = "NO NAME";
-                }
-            }
-        }
-        file.close();
-        updateList();
-        savePhoneData();
-        QMessageBox::information(this, "Import Complete", "Phone numbers imported.");
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QMessageBox::warning(this, "Error", "Failed to open file.");
+        return;
     }
+
+    QTextStream in(&file);
+    QStringList headers;
+    if (!in.atEnd()) {
+        QString line = in.readLine();
+        headers = line.split(',', Qt::SkipEmptyParts);
+    }
+
+    // Find best match for name column
+    int nameColIndex = -1;
+    for (int i = 0; i < headers.size(); ++i) {
+        QString col = headers[i].toLower();
+        if (col.contains("name") && !col.contains("last") && !col.contains("surname")) {
+            nameColIndex = i;
+            break;
+        }
+    }
+
+    QMap<QString, QString> foundNumbers;
+    QSet<QString> seenNumbers;
+
+    while (!in.atEnd()) {
+        QString line = in.readLine().trimmed();
+        if (line.isEmpty()) continue;
+
+        QStringList fields = line.split(',', Qt::KeepEmptyParts);
+        QString candidateNumber;
+
+        // Search through each column to find a valid number
+        for (QString val : fields) {
+            val = val.trimmed();
+
+            // Normalize common edge cases
+            if (val.length() == 10 && val.startsWith("9")) {
+                val = "0" + val;
+            } else if (val.startsWith("639") && val.length() == 12) {
+                val = "+" + val;
+            }
+
+            int check = checkNumber(val);
+            if (check == 1) candidateNumber = val;
+            else if (check == 2) candidateNumber = "+63" + val.mid(2);
+            else if (check == 3) candidateNumber = "+63" + val;
+
+            if (!candidateNumber.isEmpty()) break;
+        }
+
+        if (candidateNumber.isEmpty()) continue;
+        if (seenNumbers.contains(candidateNumber)) continue;
+
+        seenNumbers.insert(candidateNumber);
+        QString name = "NO NAME";
+
+        if (nameColIndex >= 0 && nameColIndex < fields.size()) {
+            name = fields[nameColIndex].trimmed();
+            if (name.isEmpty()) name = "NO NAME";
+        }
+
+        foundNumbers[candidateNumber] = name;
+    }
+
+    file.close();
+
+    if (foundNumbers.isEmpty()) {
+        QMessageBox::information(this, "No Valid Numbers", "No valid phone numbers found in the file.");
+        return;
+    }
+
+    // Apply found data
+    phoneNumbers.clear();
+    phoneInfo.clear();
+
+    phoneNumbers = foundNumbers.keys();
+    std::sort(phoneNumbers.begin(), phoneNumbers.end());
+
+    for (const QString &number : phoneNumbers) {
+        phoneInfo[number] = foundNumbers[number];
+    }
+
+    updateList();
+    savePhoneData();
+
+    QMessageBox::information(this, "Import Successful",
+                             QString("Imported %1 phone numbers.").arg(phoneNumbers.size()));
 }
+

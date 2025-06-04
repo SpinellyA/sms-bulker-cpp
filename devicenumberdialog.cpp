@@ -5,6 +5,7 @@
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QCoreApplication>
 
 DeviceNumberDialog::DeviceNumberDialog(QWidget *parent)
     : QDialog(parent)
@@ -27,6 +28,8 @@ DeviceNumberDialog::DeviceNumberDialog(QWidget *parent)
         accept();
     });
 }
+
+
 
 void DeviceNumberDialog::loadNumber() {
     QFile file("device_number.json");

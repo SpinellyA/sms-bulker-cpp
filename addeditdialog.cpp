@@ -24,7 +24,7 @@ AddEditDialog::AddEditDialog(QWidget *parent, const QString &number, const QStri
     connect(saveBtn, &QPushButton::clicked, this, &AddEditDialog::accept);
 }
 
-QString AddEditDialog::getNumber() const {
+QString AddEditDialog::getNumber() const { // const is a promise that this function reads only
     return numberEdit->text().trimmed();
 }
 
