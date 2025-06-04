@@ -1,4 +1,6 @@
 #include "mainwindow.h"
+#include "phonemanagerwindow.h"
+#include "devicenumberdialog.h"
 #include <QMessageBox>
 
 MainWindow::MainWindow(QWidget *parent)
@@ -26,7 +28,7 @@ MainWindow::MainWindow(QWidget *parent)
     layout->addWidget(sendButton);
     connect(sendButton, &QPushButton::clicked, this, &MainWindow::onSendSms);
 
-    QPushButton *deviceButton = new QPushButton("Manage Devices");
+    QPushButton *deviceButton = new QPushButton("Change My Number");
     layout->addWidget(deviceButton);
     connect(deviceButton, &QPushButton::clicked, this, &MainWindow::onManageDevices);
 
@@ -48,11 +50,14 @@ void MainWindow::onSendSms() {
 }
 
 void MainWindow::onManagePhones() {
-    QMessageBox::information(this, "Phone Manager", "This would open the phone manager window.");
+    PhoneManagerWindow *window = new PhoneManagerWindow(this);
+    window->exec();
 }
 
 void MainWindow::onManageDevices() {
-    QMessageBox::information(this, "Device Manager", "This would open the device manager window.");
+    DeviceNumberDialog *dialog = new DeviceNumberDialog(this);
+    dialog->setWindowTitle("Change My Number");
+    dialog->exec();
 }
 
 void MainWindow::onHelp() {
