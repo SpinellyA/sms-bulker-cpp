@@ -14,9 +14,12 @@
 int checkNumber(const QString &number) {
     if (number.isEmpty()) return 0;
 
+    QString num = number.trimmed();
+
     if (number.length() == 11 && number.startsWith("09") && number.toLongLong()) return 2;
     if (number.length() == 13 && number.startsWith("+639") && number.mid(1).toLongLong()) return 1;
     if (number.length() == 10 && number.startsWith("9") && number.toLongLong()) return 3;
+    if (number.length() == 12 && num.startsWith("639") && num.toLongLong()) return 4;
 
     return 0;
 }
@@ -113,15 +116,42 @@ void PhoneManagerWindow::updateList() {
     }
 }
 
+void transformNumber(QString& number) {
+    int check = checkNumber(number);
+
+    switch(check) {
+    case 1:
+        break;
+    case 2:
+        number = "+639" + number.mid(2);
+        break;
+    case 3:
+        number = "+63" + number;
+        break;
+    case 4:
+        number = "+" + number;
+        break;
+    default:
+        break;
+    }
+}
+
 void PhoneManagerWindow::addNumber() {
     AddEditDialog dlg(this);
     if (dlg.exec() == QDialog::Accepted) {
-        QString number = dlg.getNumber();
-        QString name = dlg.getName();
+        QString number = dlg.getNumber().trimmed();
+        QString name = dlg.getName().trimmed();
+
+        if(!checkNumber(number)) {
+            QMessageBox::warning(this, "Invalid", "Please enter a valid Philippine phone number.");
+        return;
+        }
+
+        transformNumber(number);
 
         if (!phoneNumbers.contains(number)) {
             phoneNumbers.append(number);
-            phoneInfo[number] = name;
+            phoneInfo[number] = name.isEmpty() ? "NO NAME" : name;
             updateList();
             savePhoneData();
         } else {
@@ -129,6 +159,7 @@ void PhoneManagerWindow::addNumber() {
         }
     }
 }
+
 
 void PhoneManagerWindow::editNumber() {
     QListWidgetItem *item = listWidget->currentItem();
@@ -141,6 +172,13 @@ void PhoneManagerWindow::editNumber() {
 
     QString number = line.mid(start + 1, end - start - 1);
     QString currentName = phoneInfo.value(number, "");
+
+    if(!checkNumber(number)) {
+        QMessageBox::warning(this, "Invalid", "Please enter a valid Philippine phone number.");
+        return;
+    }
+
+    transformNumber(number);
 
     AddEditDialog dlg(this, number, currentName, true);
     if (dlg.exec() == QDialog::Accepted) {
@@ -223,16 +261,13 @@ void PhoneManagerWindow::importFromFile() {
             val = val.trimmed();
 
             // Normalize common edge cases
-            if (val.length() == 10 && val.startsWith("9")) {
-                val = "0" + val;
-            } else if (val.startsWith("639") && val.length() == 12) {
-                val = "+" + val;
+            if(!checkNumber(val)) {
+                continue;
             }
 
-            int check = checkNumber(val);
-            if (check == 1) candidateNumber = val;
-            else if (check == 2) candidateNumber = "+63" + val.mid(2);
-            else if (check == 3) candidateNumber = "+63" + val;
+            transformNumber(val);
+
+            candidateNumber = val;
 
             if (!candidateNumber.isEmpty()) break;
         }

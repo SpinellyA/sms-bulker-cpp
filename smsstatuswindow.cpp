@@ -131,14 +131,18 @@ void SMSStatusWindow::logMessage(const QString &recipientNumber, const QString &
     if (!logFile.open(QIODevice::Append | QIODevice::Text)) return;
 
     QTextStream stream(&logFile);
+
+    QString personalizedMessage = message;
+    personalizedMessage.replace("%name%", recipientName, Qt::CaseInsensitive);
+
     stream << "\n\n";
     stream << "SENT TO: " << recipientNumber << ", " << recipientName << "\n";
-    stream << "Message: " << message << "\n\n";
+    stream << "Message: " << personalizedMessage << "\n\n";
     logFile.close();
 }
 
 void SMSStatusWindow::finishSending() {
     QMessageBox::information(this, "Success",
                              QString("Successfully sent to %1/%2 numbers!")
-                             .arg(sentCount).arg(phoneNumbers.size() - 1));
+                             .arg(sentCount+1).arg(phoneNumbers.size()));
 }
