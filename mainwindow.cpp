@@ -3,12 +3,17 @@
 #include "devicenumberdialog.h"
 #include "smsstatuswindow.h"
 #include <QMessageBox>
+#include <QApplication>
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QJsonValue>
 #include <QMessageBox>
+#include <QDesktopServices>
+#include <QUrl>
+#include <QDir>
+#include <QStyleFactory>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -28,7 +33,7 @@ MainWindow::MainWindow(QWidget *parent)
     layout->addWidget(messageLabel);
 
     messageEntry = new QTextEdit();
-    messageEntry->setFixedHeight(100);
+    messageEntry->setMinimumHeight(200);
     layout->addWidget(messageEntry);
 
     QPushButton *sendButton = new QPushButton("Send SMS");
@@ -39,15 +44,17 @@ MainWindow::MainWindow(QWidget *parent)
     layout->addWidget(deviceButton);
     connect(deviceButton, &QPushButton::clicked, this, &MainWindow::onManageDevices);
 
-    QPushButton *helpButton = new QPushButton("Help and FAQ");
+    QPushButton *helpButton = new QPushButton("Message Logs");
     layout->addWidget(helpButton);
-    connect(helpButton, &QPushButton::clicked, this, &MainWindow::onHelp);
-
-    QLabel *tosLabel = new QLabel("Please note that your messages are monitored to enforce TOS.");
-    layout->addWidget(tosLabel);
+    connect(helpButton, &QPushButton::clicked, this, &MainWindow::onLogs);
 
     setCentralWidget(centralWidget);
+    QPushButton *coolButton = new QPushButton("A cool buttom that does things");
+    layout->addWidget(coolButton);
+    connect(coolButton, &QPushButton::clicked, this, &MainWindow::onCoolButton);
 }
+
+
 
 MainWindow::~MainWindow() {}
 
@@ -57,7 +64,6 @@ void MainWindow::onSendSms() {
         QMessageBox::warning(this, "Empty", "Please enter a message first.");
         return;
     }
-    // Load numbers from file or memory
     QStringList numbers;
     QFile file("phone_numbers.json");
     if (file.open(QIODevice::ReadOnly)) {
@@ -97,6 +103,25 @@ void MainWindow::onManageDevices() {
     dialog->exec();
 }
 
-void MainWindow::onHelp() {
-    QMessageBox::information(this, "Help & FAQ", "This would show the help/FAQ content.");
+void MainWindow::onLogs() {
+    QString path = QDir::currentPath() + "/MessageLogs";
+    if (!QDir("MessageLogs").exists()) {
+        QMessageBox::information(this, "Logs", "No MessageLogs folder found yet.");
+        return;
+    }
+    QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+}
+
+int colorMode = 0;
+
+void MainWindow::onCoolButton() {
+    QStringList styles = QStyleFactory::keys();
+
+    QString selectedStyle = styles.value(colorMode, "Fusion");
+    QApplication::setStyle(QStyleFactory::create(selectedStyle));
+
+    colorMode++;
+    if(colorMode >= styles.size()) {
+        colorMode = 0;
+    }
 }

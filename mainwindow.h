@@ -19,10 +19,12 @@ private slots:
     void onSendSms();
     void onManagePhones();
     void onManageDevices();
-    void onHelp();
+    void onLogs();
+    void onCoolButton();
 
 private:
     QTextEdit *messageEntry;
 };
+
 
 #endif
